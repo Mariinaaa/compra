@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lista de la Compra</title>
+<meta name="description" content="Lista de la compra offline organizada por secciones del supermercado">
+<meta name="theme-color" content="#16a34a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Compra">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>🛒 Lista de la compra</h1>
+    <button id="menuBtn" class="icon-btn" title="Más opciones" aria-haspopup="true" aria-expanded="false">⋮</button>
+    <nav id="menuPanel" class="menu-panel hidden">
+      <button id="saveTemplateBtn">💾 Guardar como lista recurrente</button>
+      <button id="loadTemplateBtn">📋 Cargar lista recurrente</button>
+      <button id="clearCheckedBtn">🧹 Quitar marcados</button>
+      <button id="clearAllBtn">🗑️ Vaciar lista</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="categoriesContainer"></div>
+  </main>
+
+  <div id="templatesModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Listas recurrentes</h2>
+        <button id="closeTemplatesBtn" class="icon-btn" title="Cerrar">✖</button>
+      </div>
+      <div id="templatesList" class="templates-list"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="js/db.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
