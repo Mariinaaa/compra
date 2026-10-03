@@ -19,6 +19,7 @@
     <h1>🛒 Lista de la compra</h1>
     <button id="menuBtn" class="icon-btn" title="Más opciones" aria-haspopup="true" aria-expanded="false">⋮</button>
     <nav id="menuPanel" class="menu-panel hidden">
+      <button id="manageCatalogBtn">🏷️ Productos habituales</button>
       <button id="saveTemplateBtn">💾 Guardar como lista recurrente</button>
       <button id="loadTemplateBtn">📋 Cargar lista recurrente</button>
       <button id="clearCheckedBtn">🧹 Quitar marcados</button>
@@ -27,6 +28,7 @@
   </header>
 
   <main>
+    <div id="totalBar" class="total-bar hidden">Total estimado: <strong id="totalAmount">0,00 €</strong></div>
     <div id="categoriesContainer"></div>
   </main>
 
@@ -37,6 +39,22 @@
         <button id="closeTemplatesBtn" class="icon-btn" title="Cerrar">✖</button>
       </div>
       <div id="templatesList" class="templates-list"></div>
+    </div>
+  </div>
+
+  <div id="catalogModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Productos habituales</h2>
+        <button id="closeCatalogBtn" class="icon-btn" title="Cerrar">✖</button>
+      </div>
+      <form id="catalogForm" class="catalog-form" autocomplete="off">
+        <input id="catalogNameInput" type="text" placeholder="Nombre (ej. Pollo asado)" required>
+        <select id="catalogCategorySelect" title="Sección"></select>
+        <input id="catalogPriceInput" type="number" step="0.01" min="0" placeholder="Precio €">
+        <button type="submit" class="icon-btn primary" title="Añadir">➕</button>
+      </form>
+      <div id="catalogList" class="catalog-list"></div>
     </div>
   </div>
 

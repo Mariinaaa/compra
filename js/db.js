@@ -3,6 +3,7 @@ const DB = (() => {
   const KEYS = {
     items: 'compra.items',
     templates: 'compra.templates',
+    catalog: 'compra.catalog',
   };
 
   function read(key, fallback) {
@@ -34,5 +35,8 @@ const DB = (() => {
     // templates: [{ id, name, items: [{ name, category }] }]
     getTemplates: () => read(KEYS.templates, []),
     setTemplates: (templates) => write(KEYS.templates, templates),
+    // catalog: [{ id, name, category, price }]
+    getCatalog: () => read(KEYS.catalog, []),
+    setCatalog: (catalog) => write(KEYS.catalog, catalog),
   };
 })();

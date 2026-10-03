@@ -10,6 +10,8 @@ const CATEGORIES = [
   { id: 'lacteos', label: 'Lácteos', emoji: '🥛' },
   { id: 'panes', label: 'Panes', emoji: '🍞' },
   { id: 'frutas_verduras', label: 'Frutas/Verduras', emoji: '🍎' },
+  { id: 'despensa', label: 'Despensa', emoji: '🥫' },
+  { id: 'bebidas', label: 'Bebidas', emoji: '🥤' },
   { id: 'higiene', label: 'Higiene', emoji: '🧴' },
   { id: 'limpieza', label: 'Limpieza', emoji: '🧽' },
   { id: 'otros', label: 'Otros', emoji: '🛒' },
@@ -17,15 +19,55 @@ const CATEGORIES = [
 const DEFAULT_CATEGORY = 'otros';
 const categoryById = new Map(CATEGORIES.map((c) => [c.id, c]));
 
+// Productos habituales precargados la primera vez que se abre la app (editable luego desde el catálogo).
+const DEFAULT_CATALOG = [
+  { name: 'Lagrimitas de pollo al limón', category: 'carniceria_polleria', price: 3.61 },
+  { name: 'Filetes pechuga de pollo', category: 'carniceria_polleria', price: 4.18 },
+  { name: 'Tiras de pechuga pollo (ensaladas)', category: 'carniceria_polleria', price: 2.25 },
+  { name: 'Tiras de pollo naranja', category: 'carniceria_polleria', price: 2.52 },
+  { name: 'Aceite de oliva virgen extra (tapón negro)', category: 'despensa', price: 4.70 },
+  { name: 'Sal', category: 'despensa', price: 0.70 },
+  { name: 'Tomate frito', category: 'despensa', price: 1.40 },
+  { name: 'Aceitunas', category: 'despensa', price: 3.00 },
+  { name: 'Pipas', category: 'despensa', price: 1.10 },
+  { name: 'Cacahuete', category: 'despensa', price: 1.30 },
+  { name: 'Kikos', category: 'despensa', price: 1.00 },
+  { name: 'Pipas calabaza', category: 'despensa', price: 1.55 },
+  { name: 'Patatas fritas', category: 'despensa', price: 1.80 },
+  { name: 'Arroz SOS', category: 'despensa', price: 1.88 },
+  { name: 'Garbanzo', category: 'despensa', price: 0.80 },
+  { name: 'Fideos', category: 'despensa', price: 0.80 },
+  { name: 'Anchoas', category: 'despensa', price: 2.80 },
+  { name: 'Zumo limón', category: 'bebidas', price: 1.40 },
+  { name: 'Zumo naranja', category: 'bebidas', price: 5.95 },
+  { name: 'Salmón ahumado', category: 'nevera', price: 10.80 },
+  { name: 'Empanada pollo', category: 'precocinados', price: 3.85 },
+  { name: 'Tronquitos', category: 'pescado', price: 2.25 },
+  { name: 'Pan mama', category: 'panes', price: 1.15 },
+  { name: 'Pan desayuno', category: 'panes', price: 1.04 },
+  { name: 'Ensaladilla rusa', category: 'nevera', price: 3.50 },
+  { name: 'Poke', category: 'nevera', price: 5.50 },
+  { name: 'Mac and cheese', category: 'precocinados', price: 2.45 },
+  { name: 'Yogures', category: 'lacteos', price: 1.40 },
+];
+
 let items = DB.getItems();
 let templates = DB.getTemplates();
+let catalog = DB.getCatalog();
+if (catalog.length === 0) {
+  catalog = DEFAULT_CATALOG.map((p) => ({ id: DB.uid(), ...p }));
+  DB.setCatalog(catalog);
+}
 
 // --- DOM refs ---
 const categoriesContainer = document.getElementById('categoriesContainer');
 // categoryId -> <ul> element, built once so typing in other sections isn't disturbed on re-render
 const categoryListEls = new Map();
+const totalBar = document.getElementById('totalBar');
+const totalAmount = document.getElementById('totalAmount');
 const menuBtn = document.getElementById('menuBtn');
 const menuPanel = document.getElementById('menuPanel');
+const manageCatalogBtn = document.getElementById('manageCatalogBtn');
 const saveTemplateBtn = document.getElementById('saveTemplateBtn');
 const loadTemplateBtn = document.getElementById('loadTemplateBtn');
 const clearCheckedBtn = document.getElementById('clearCheckedBtn');
@@ -33,6 +75,13 @@ const clearAllBtn = document.getElementById('clearAllBtn');
 const templatesModal = document.getElementById('templatesModal');
 const templatesList = document.getElementById('templatesList');
 const closeTemplatesBtn = document.getElementById('closeTemplatesBtn');
+const catalogModal = document.getElementById('catalogModal');
+const catalogList = document.getElementById('catalogList');
+const catalogForm = document.getElementById('catalogForm');
+const catalogNameInput = document.getElementById('catalogNameInput');
+const catalogCategorySelect = document.getElementById('catalogCategorySelect');
+const catalogPriceInput = document.getElementById('catalogPriceInput');
+const closeCatalogBtn = document.getElementById('closeCatalogBtn');
 const toast = document.getElementById('toast');
 
 let toastTimer = null;
@@ -45,6 +94,16 @@ function showToast(message) {
 
 function persistItems() { DB.setItems(items); }
 function persistTemplates() { DB.setTemplates(templates); }
+function persistCatalog() { DB.setCatalog(catalog); }
+
+// Quita acentos para que "polleria" encuentre "Pollería".
+function normalize(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function formatPrice(price) {
+  return price.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+}
 
 // Crea una vez la sección (título + lista + mini formulario) de cada pasillo.
 function buildCategorySections() {
@@ -65,10 +124,64 @@ function buildCategorySections() {
     form.className = 'category-add-form';
     form.autocomplete = 'off';
 
+    const inputWrapper = document.createElement('div');
+    inputWrapper.className = 'input-wrapper';
+
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = `Añadir a ${cat.label.toLowerCase()}...`;
     input.setAttribute('aria-label', `Añadir producto a ${cat.label}`);
+
+    const suggestions = document.createElement('div');
+    suggestions.className = 'suggestions hidden';
+
+    let selectedPrice = null;
+
+    function hideSuggestions() {
+      suggestions.classList.add('hidden');
+      suggestions.textContent = '';
+    }
+
+    function showSuggestions(query) {
+      const matches = searchCatalog(cat.id, query);
+      suggestions.textContent = '';
+      if (matches.length === 0) {
+        hideSuggestions();
+        return;
+      }
+      for (const entry of matches) {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'suggestion-item';
+        const name = document.createElement('span');
+        name.textContent = entry.name;
+        row.appendChild(name);
+        if (typeof entry.price === 'number') {
+          const price = document.createElement('span');
+          price.className = 'suggestion-price';
+          price.textContent = formatPrice(entry.price);
+          row.appendChild(price);
+        }
+        row.addEventListener('mousedown', (e) => e.preventDefault()); // evita perder el foco antes del click
+        row.addEventListener('click', () => {
+          addItem(entry.name, cat.id, entry.price);
+          input.value = '';
+          hideSuggestions();
+          input.focus();
+        });
+        suggestions.appendChild(row);
+      }
+      suggestions.classList.remove('hidden');
+    }
+
+    input.addEventListener('input', () => {
+      selectedPrice = null;
+      const query = input.value.trim();
+      if (query) showSuggestions(query); else hideSuggestions();
+    });
+    input.addEventListener('blur', () => setTimeout(hideSuggestions, 150));
+
+    inputWrapper.append(input, suggestions);
 
     const addBtn = document.createElement('button');
     addBtn.type = 'submit';
@@ -76,11 +189,13 @@ function buildCategorySections() {
     addBtn.title = 'Añadir';
     addBtn.textContent = '➕';
 
-    form.append(input, addBtn);
+    form.append(inputWrapper, addBtn);
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      addItem(input.value, cat.id);
+      addItem(input.value, cat.id, selectedPrice);
       input.value = '';
+      selectedPrice = null;
+      hideSuggestions();
       input.focus();
     });
 
@@ -88,6 +203,14 @@ function buildCategorySections() {
     categoriesContainer.appendChild(section);
     categoryListEls.set(cat.id, ul);
   }
+}
+
+function searchCatalog(categoryId, query) {
+  const q = normalize(query);
+  return catalog
+    .filter((entry) => entry.category === categoryId && normalize(entry.name).includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+    .slice(0, 6);
 }
 
 // Items guardados con una categoría que ya no existe caen en "Otros".
@@ -119,6 +242,14 @@ function render() {
       ul.appendChild(renderItemRow(item));
     }
   }
+  renderTotal();
+}
+
+function renderTotal() {
+  const pricedItems = items.filter((it) => typeof it.price === 'number');
+  totalBar.classList.toggle('hidden', items.length === 0);
+  const total = pricedItems.reduce((sum, it) => sum + it.price, 0);
+  totalAmount.textContent = formatPrice(total);
 }
 
 function renderItemRow(item) {
@@ -135,6 +266,14 @@ function renderItemRow(item) {
   name.className = 'item-name';
   name.textContent = item.name;
 
+  if (typeof item.price === 'number') {
+    const price = document.createElement('span');
+    price.className = 'item-price';
+    price.textContent = formatPrice(item.price);
+    name.appendChild(document.createTextNode(' · '));
+    name.appendChild(price);
+  }
+
   const del = document.createElement('button');
   del.type = 'button';
   del.className = 'item-delete';
@@ -146,7 +285,7 @@ function renderItemRow(item) {
   return li;
 }
 
-function addItem(name, category) {
+function addItem(name, category, price) {
   const trimmed = name.trim();
   if (!trimmed) return;
 
@@ -162,6 +301,7 @@ function addItem(name, category) {
     id: DB.uid(),
     name: trimmed,
     category,
+    price: typeof price === 'number' ? price : null,
     checked: false,
     createdAt: Date.now(),
   });
@@ -289,6 +429,73 @@ function closeTemplatesModal() {
   templatesModal.classList.add('hidden');
 }
 
+// --- Catálogo de productos habituales (nombre + sección + precio) ---
+function populateCatalogCategorySelect() {
+  catalogCategorySelect.textContent = '';
+  for (const cat of CATEGORIES) {
+    const opt = document.createElement('option');
+    opt.value = cat.id;
+    opt.textContent = `${cat.emoji} ${cat.label}`;
+    catalogCategorySelect.appendChild(opt);
+  }
+}
+
+function addCatalogEntry(name, category, price) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  catalog.push({
+    id: DB.uid(),
+    name: trimmed,
+    category,
+    price: typeof price === 'number' && !Number.isNaN(price) ? price : null,
+  });
+  persistCatalog();
+  renderCatalogList();
+}
+
+function deleteCatalogEntry(id) {
+  catalog = catalog.filter((entry) => entry.id !== id);
+  persistCatalog();
+  renderCatalogList();
+}
+
+function renderCatalogList() {
+  catalogList.textContent = '';
+  if (catalog.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'template-empty';
+    empty.textContent = 'Todavía no has añadido productos habituales.';
+    catalogList.appendChild(empty);
+    return;
+  }
+  const sorted = [...catalog].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  for (const entry of sorted) {
+    const cat = categoryById.get(entry.category);
+    const row = document.createElement('div');
+    row.className = 'template-row';
+
+    const label = document.createElement('span');
+    const priceText = typeof entry.price === 'number' ? ` · ${formatPrice(entry.price)}` : '';
+    label.textContent = `${cat ? cat.emoji : '🛒'} ${entry.name}${priceText}`;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'template-delete';
+    delBtn.textContent = 'Eliminar';
+    delBtn.addEventListener('click', () => deleteCatalogEntry(entry.id));
+
+    row.append(label, delBtn);
+    catalogList.appendChild(row);
+  }
+}
+
+function openCatalogModal() {
+  renderCatalogList();
+  catalogModal.classList.remove('hidden');
+}
+function closeCatalogModal() {
+  catalogModal.classList.add('hidden');
+}
+
 // --- Menú ---
 function toggleMenu(forceClose) {
   const shouldClose = forceClose ?? !menuPanel.classList.contains('hidden');
@@ -303,6 +510,7 @@ document.addEventListener('click', (e) => {
 });
 
 menuBtn.addEventListener('click', () => toggleMenu());
+manageCatalogBtn.addEventListener('click', () => { toggleMenu(true); openCatalogModal(); });
 saveTemplateBtn.addEventListener('click', () => { toggleMenu(true); saveTemplate(); });
 loadTemplateBtn.addEventListener('click', () => { toggleMenu(true); openTemplatesModal(); });
 clearCheckedBtn.addEventListener('click', () => { toggleMenu(true); clearChecked(); });
@@ -310,6 +518,17 @@ clearAllBtn.addEventListener('click', () => { toggleMenu(true); clearAll(); });
 closeTemplatesBtn.addEventListener('click', closeTemplatesModal);
 templatesModal.addEventListener('click', (e) => {
   if (e.target === templatesModal) closeTemplatesModal();
+});
+closeCatalogBtn.addEventListener('click', closeCatalogModal);
+catalogModal.addEventListener('click', (e) => {
+  if (e.target === catalogModal) closeCatalogModal();
+});
+catalogForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  addCatalogEntry(catalogNameInput.value, catalogCategorySelect.value, parseFloat(catalogPriceInput.value));
+  catalogNameInput.value = '';
+  catalogPriceInput.value = '';
+  catalogNameInput.focus();
 });
 
 // --- Service worker ---
@@ -323,5 +542,6 @@ if ('serviceWorker' in navigator) {
 
 // --- Inicialización ---
 normalizeCategories();
+populateCatalogCategorySelect();
 buildCategorySections();
 render();

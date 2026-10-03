@@ -133,6 +133,16 @@ main {
   gap: 0.5rem;
 }
 
+.input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.input-wrapper input {
+  width: 100%;
+}
+
 .category-add-form input {
   flex: 1;
   min-width: 0;
@@ -142,6 +152,39 @@ main {
   border: 1px solid var(--border);
   background: var(--surface-alt);
   color: var(--text);
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  z-index: 5;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+.suggestion-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.suggestion-item:hover { background: var(--surface); }
+
+.suggestion-price {
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .item-row {
@@ -172,6 +215,11 @@ main {
 .item-name {
   flex: 1;
   word-break: break-word;
+}
+
+.item-price {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 .item-delete {
@@ -244,6 +292,44 @@ main {
   color: var(--text-muted);
   text-align: center;
   padding: 1rem;
+}
+
+.total-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.85rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+.total-bar strong { color: var(--text); }
+
+.catalog-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.catalog-form input,
+.catalog-form select {
+  font-size: 1rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.catalog-form input[type=text] { flex: 2; min-width: 140px; }
+.catalog-form input[type=number] { flex: 1; min-width: 90px; }
+.catalog-form select { flex: 2; min-width: 140px; }
+
+.catalog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .toast {
