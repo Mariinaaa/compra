@@ -63,6 +63,8 @@ if (catalog.length === 0) {
 const categoriesContainer = document.getElementById('categoriesContainer');
 // categoryId -> <ul> element, built once so typing in other sections isn't disturbed on re-render
 const categoryListEls = new Map();
+// categoryId -> contenedor de chips del catálogo para ese pasillo
+const categoryChipsEls = new Map();
 const totalBar = document.getElementById('totalBar');
 const totalAmount = document.getElementById('totalAmount');
 const menuBtn = document.getElementById('menuBtn');
@@ -116,6 +118,9 @@ function buildCategorySections() {
     const title = document.createElement('h2');
     title.className = 'category-title';
     title.textContent = `${cat.emoji} ${cat.label}`;
+
+    const chips = document.createElement('div');
+    chips.className = 'catalog-chips hidden';
 
     const ul = document.createElement('ul');
     ul.className = 'item-list';
@@ -199,9 +204,38 @@ function buildCategorySections() {
       input.focus();
     });
 
-    section.append(title, ul, form);
+    section.append(title, chips, ul, form);
     categoriesContainer.appendChild(section);
     categoryListEls.set(cat.id, ul);
+    categoryChipsEls.set(cat.id, chips);
+  }
+}
+
+// Pinta, para cada pasillo, todos los productos del catálogo como botones de añadir rápido.
+function renderCatalogChips() {
+  for (const cat of CATEGORIES) {
+    const container = categoryChipsEls.get(cat.id);
+    container.textContent = '';
+    const entries = catalog
+      .filter((entry) => entry.category === cat.id)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    container.classList.toggle('hidden', entries.length === 0);
+    for (const entry of entries) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'catalog-chip';
+      const name = document.createElement('span');
+      name.textContent = entry.name;
+      chip.appendChild(name);
+      if (typeof entry.price === 'number') {
+        const price = document.createElement('span');
+        price.className = 'chip-price';
+        price.textContent = formatPrice(entry.price);
+        chip.appendChild(price);
+      }
+      chip.addEventListener('click', () => addItem(entry.name, cat.id, entry.price));
+      container.appendChild(chip);
+    }
   }
 }
 
@@ -451,12 +485,14 @@ function addCatalogEntry(name, category, price) {
   });
   persistCatalog();
   renderCatalogList();
+  renderCatalogChips();
 }
 
 function deleteCatalogEntry(id) {
   catalog = catalog.filter((entry) => entry.id !== id);
   persistCatalog();
   renderCatalogList();
+  renderCatalogChips();
 }
 
 function renderCatalogList() {
@@ -544,4 +580,5 @@ if ('serviceWorker' in navigator) {
 normalizeCategories();
 populateCatalogCategorySelect();
 buildCategorySections();
+renderCatalogChips();
 render();
