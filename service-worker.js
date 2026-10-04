@@ -1,4 +1,4 @@
-const CACHE_NAME = 'compra-cache-v7';
+const CACHE_NAME = 'compra-cache-v8';
 const APP_SHELL = [
   './',
   './index.html',

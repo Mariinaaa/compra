@@ -84,6 +84,8 @@ const catalogNameInput = document.getElementById('catalogNameInput');
 const catalogCategorySelect = document.getElementById('catalogCategorySelect');
 const catalogPriceInput = document.getElementById('catalogPriceInput');
 const closeCatalogBtn = document.getElementById('closeCatalogBtn');
+const importCatalogBtn = document.getElementById('importCatalogBtn');
+const importCatalogFile = document.getElementById('importCatalogFile');
 const toast = document.getElementById('toast');
 
 let toastTimer = null;
@@ -148,7 +150,7 @@ function buildCategorySections() {
     }
 
     function showSuggestions(query) {
-      const matches = searchCatalog(cat.id, query);
+      const matches = searchCatalog(query);
       suggestions.textContent = '';
       if (matches.length === 0) {
         hideSuggestions();
@@ -159,7 +161,8 @@ function buildCategorySections() {
         row.type = 'button';
         row.className = 'suggestion-item';
         const name = document.createElement('span');
-        name.textContent = entry.name;
+        const entryCat = categoryById.get(entry.category);
+        name.textContent = `${entryCat ? entryCat.emoji : '🛒'} ${entry.name}`;
         row.appendChild(name);
         if (typeof entry.price === 'number') {
           const price = document.createElement('span');
@@ -169,7 +172,7 @@ function buildCategorySections() {
         }
         row.addEventListener('mousedown', (e) => e.preventDefault()); // evita perder el foco antes del click
         row.addEventListener('click', () => {
-          addItem(entry.name, cat.id, entry.price);
+          addItem(entry.name, entry.category, entry.price);
           input.value = '';
           hideSuggestions();
           input.focus();
@@ -239,12 +242,13 @@ function renderCatalogChips() {
   }
 }
 
-function searchCatalog(categoryId, query) {
+// Busca en todo el catálogo, sin importar el pasillo donde se esté escribiendo.
+function searchCatalog(query) {
   const q = normalize(query);
   return catalog
-    .filter((entry) => entry.category === categoryId && normalize(entry.name).includes(q))
+    .filter((entry) => normalize(entry.name).includes(q))
     .sort((a, b) => a.name.localeCompare(b.name, 'es'))
-    .slice(0, 6);
+    .slice(0, 8);
 }
 
 // Items guardados con una categoría que ya no existe caen en "Otros".
@@ -532,6 +536,91 @@ function closeCatalogModal() {
   catalogModal.classList.add('hidden');
 }
 
+// Busca una categoría por id exacto o por su nombre (ignorando acentos/mayúsculas).
+function matchCategory(value) {
+  const raw = (value || '').trim();
+  if (categoryById.has(raw)) return raw;
+  const normalized = normalize(raw);
+  const found = CATEGORIES.find((c) => normalize(c.label) === normalized || normalize(c.id) === normalized);
+  return found ? found.id : DEFAULT_CATEGORY;
+}
+
+// Admite precios "1,40" (coma decimal española) o "1.40", con o sin símbolo €.
+function parsePriceCell(value) {
+  const cleaned = (value || '').replace(/[€\s]/g, '').replace(',', '.');
+  const price = parseFloat(cleaned);
+  return Number.isNaN(price) ? null : price;
+}
+
+// Parser CSV minimalista con soporte de campos entre comillas.
+function parseCsv(text) {
+  const firstLine = text.split(/\r?\n/, 1)[0] || '';
+  const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+  const rows = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const cells = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === delimiter && !inQuotes) {
+        cells.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    cells.push(current);
+    rows.push(cells.map((c) => c.trim().replace(/^"|"$/g, '')));
+  }
+  return rows;
+}
+
+// Importa un catálogo completo desde un CSV exportado de Excel/Google Sheets
+// (columnas: nombre, categoría, precio). Actualiza productos existentes por nombre y añade los nuevos.
+function importCatalogFromCsv(text) {
+  const rows = parseCsv(text);
+  if (rows.length === 0) {
+    showToast('El archivo está vacío');
+    return;
+  }
+  const header = rows[0].map((h) => normalize(h));
+  const nameIdx = header.findIndex((h) => ['nombre', 'producto', 'name'].includes(h));
+  const catIdx = header.findIndex((h) => ['categoria', 'seccion', 'pasillo', 'category'].includes(h));
+  const priceIdx = header.findIndex((h) => ['precio', 'price'].includes(h));
+  if (nameIdx === -1) {
+    showToast('El CSV necesita una columna "nombre"');
+    return;
+  }
+
+  let added = 0;
+  let updated = 0;
+  for (const row of rows.slice(1)) {
+    const name = (row[nameIdx] || '').trim();
+    if (!name) continue;
+    const category = catIdx !== -1 ? matchCategory(row[catIdx]) : DEFAULT_CATEGORY;
+    const price = priceIdx !== -1 ? parsePriceCell(row[priceIdx]) : null;
+
+    const existing = catalog.find((entry) => normalize(entry.name) === normalize(name));
+    if (existing) {
+      existing.category = category;
+      existing.price = price;
+      updated += 1;
+    } else {
+      catalog.push({ id: DB.uid(), name, category, price });
+      added += 1;
+    }
+  }
+
+  persistCatalog();
+  renderCatalogList();
+  renderCatalogChips();
+  showToast(`Importado: ${added} nuevos, ${updated} actualizados`);
+}
+
 // --- Menú ---
 function toggleMenu(forceClose) {
   const shouldClose = forceClose ?? !menuPanel.classList.contains('hidden');
@@ -565,6 +654,17 @@ catalogForm.addEventListener('submit', (e) => {
   catalogNameInput.value = '';
   catalogPriceInput.value = '';
   catalogNameInput.focus();
+});
+
+importCatalogBtn.addEventListener('click', () => importCatalogFile.click());
+importCatalogFile.addEventListener('change', () => {
+  const file = importCatalogFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => importCatalogFromCsv(String(reader.result));
+  reader.onerror = () => showToast('No se pudo leer el archivo');
+  reader.readAsText(file, 'UTF-8');
+  importCatalogFile.value = '';
 });
 
 // --- Service worker ---

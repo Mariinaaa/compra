@@ -54,6 +54,10 @@
         <input id="catalogPriceInput" type="number" step="0.01" min="0" placeholder="Precio €">
         <button type="submit" class="icon-btn primary" title="Añadir">➕</button>
       </form>
+      <div class="catalog-import-row">
+        <button type="button" id="importCatalogBtn">📥 Importar desde CSV/Excel</button>
+        <input id="importCatalogFile" type="file" accept=".csv,text/csv" class="hidden" aria-label="Importar archivo CSV">
+      </div>
       <div id="catalogList" class="catalog-list"></div>
     </div>
   </div>
