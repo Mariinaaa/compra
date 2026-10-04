@@ -470,10 +470,11 @@ function parsePriceCell(value) {
 
 // Parser CSV minimalista con soporte de campos entre comillas.
 function parseCsv(text) {
-  const firstLine = text.split(/\r?\n/, 1)[0] || '';
+  const lines = text.split(/\r\n|\n|\r/);
+  const firstLine = lines[0] || '';
   const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
   const rows = [];
-  for (const line of text.split(/\r?\n/)) {
+  for (const line of lines) {
     if (!line.trim()) continue;
     const cells = [];
     let current = '';
@@ -576,9 +577,18 @@ importCatalogFile.addEventListener('change', () => {
   const file = importCatalogFile.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => importCatalogFromCsv(String(reader.result));
+  reader.onload = () => {
+    const buf = reader.result;
+    // Los CSV de Excel pueden venir en UTF-8, windows-1252 o macintosh; probamos UTF-8 primero
+    // y si aparece el carácter de reemplazo, intentamos con macintosh (Excel antiguo en Mac).
+    const utf8Text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+    const text = utf8Text.includes('\uFFFD')
+      ? new TextDecoder('macintosh').decode(buf)
+      : utf8Text;
+    importCatalogFromCsv(text);
+  };
   reader.onerror = () => showToast('No se pudo leer el archivo');
-  reader.readAsText(file, 'UTF-8');
+  reader.readAsArrayBuffer(file);
   importCatalogFile.value = '';
 });
 
