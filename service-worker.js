@@ -1,4 +1,4 @@
-const CACHE_NAME = 'compra-cache-v14';
+const CACHE_NAME = 'compra-cache-v15';
 const APP_SHELL = [
   './',
   './index.html',
@@ -25,26 +25,27 @@ self.addEventListener('activate', (event) => {
         keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       ))
       .then(() => self.clients.claim())
+      // Fuerza recarga de las pestañas abiertas para que pillen la nueva versión.
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then((clients) => clients.forEach((client) => client.navigate(client.url)))
   );
 });
 
-// Cache-first para recursos propios, con actualización en segundo plano.
+// Network-first: intenta siempre la red; si no hay conexión, usa la caché.
+// Así las actualizaciones se ven al instante sin tener que borrar nada.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request))
   );
 });
