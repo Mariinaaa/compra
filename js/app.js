@@ -19,45 +19,9 @@ const CATEGORIES = [
 const DEFAULT_CATEGORY = 'otros';
 const categoryById = new Map(CATEGORIES.map((c) => [c.id, c]));
 
-// Productos habituales precargados la primera vez que se abre la app (editable luego desde el catálogo).
-const DEFAULT_CATALOG = [
-  { name: 'Lagrimitas de pollo al limón', category: 'carniceria_polleria', price: 3.61 },
-  { name: 'Filetes pechuga de pollo', category: 'carniceria_polleria', price: 4.18 },
-  { name: 'Tiras de pechuga pollo (ensaladas)', category: 'carniceria_polleria', price: 2.25 },
-  { name: 'Tiras de pollo naranja', category: 'carniceria_polleria', price: 2.52 },
-  { name: 'Aceite de oliva virgen extra (tapón negro)', category: 'despensa', price: 4.70 },
-  { name: 'Sal', category: 'despensa', price: 0.70 },
-  { name: 'Tomate frito', category: 'despensa', price: 1.40 },
-  { name: 'Aceitunas', category: 'despensa', price: 3.00 },
-  { name: 'Pipas', category: 'despensa', price: 1.10 },
-  { name: 'Cacahuete', category: 'despensa', price: 1.30 },
-  { name: 'Kikos', category: 'despensa', price: 1.00 },
-  { name: 'Pipas calabaza', category: 'despensa', price: 1.55 },
-  { name: 'Patatas fritas', category: 'despensa', price: 1.80 },
-  { name: 'Arroz SOS', category: 'despensa', price: 1.88 },
-  { name: 'Garbanzo', category: 'despensa', price: 0.80 },
-  { name: 'Fideos', category: 'despensa', price: 0.80 },
-  { name: 'Anchoas', category: 'despensa', price: 2.80 },
-  { name: 'Zumo limón', category: 'bebidas', price: 1.40 },
-  { name: 'Zumo naranja', category: 'bebidas', price: 5.95 },
-  { name: 'Salmón ahumado', category: 'nevera', price: 10.80 },
-  { name: 'Empanada pollo', category: 'precocinados', price: 3.85 },
-  { name: 'Tronquitos', category: 'pescado', price: 2.25 },
-  { name: 'Pan mama', category: 'panes', price: 1.15 },
-  { name: 'Pan desayuno', category: 'panes', price: 1.04 },
-  { name: 'Ensaladilla rusa', category: 'nevera', price: 3.50 },
-  { name: 'Poke', category: 'nevera', price: 5.50 },
-  { name: 'Mac and cheese', category: 'precocinados', price: 2.45 },
-  { name: 'Yogures', category: 'lacteos', price: 1.40 },
-];
-
 let items = DB.getItems();
 let templates = DB.getTemplates();
 let catalog = DB.getCatalog();
-if (catalog.length === 0) {
-  catalog = DEFAULT_CATALOG.map((p) => ({ id: DB.uid(), ...p }));
-  DB.setCatalog(catalog);
-}
 
 // --- DOM refs ---
 const categoriesContainer = document.getElementById('categoriesContainer');
