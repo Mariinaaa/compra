@@ -79,7 +79,6 @@ const catalogModal = document.getElementById('catalogModal');
 const catalogList = document.getElementById('catalogList');
 const catalogForm = document.getElementById('catalogForm');
 const catalogNameInput = document.getElementById('catalogNameInput');
-const catalogCategorySelect = document.getElementById('catalogCategorySelect');
 const catalogPriceInput = document.getElementById('catalogPriceInput');
 const closeCatalogBtn = document.getElementById('closeCatalogBtn');
 const importCatalogBtn = document.getElementById('importCatalogBtn');
@@ -156,8 +155,7 @@ function buildCategorySections() {
         row.type = 'button';
         row.className = 'suggestion-item';
         const name = document.createElement('span');
-        const entryCat = categoryById.get(entry.category);
-        name.textContent = `${entryCat ? entryCat.emoji : '🛒'} ${entry.name}`;
+        name.textContent = entry.name;
         row.appendChild(name);
         if (typeof entry.price === 'number') {
           const price = document.createElement('span');
@@ -167,7 +165,7 @@ function buildCategorySections() {
         }
         row.addEventListener('mousedown', (e) => e.preventDefault()); // evita perder el foco antes del click
         row.addEventListener('click', () => {
-          addItem(entry.name, entry.category, entry.price);
+          addItem(entry.name, cat.id, entry.price);
           input.value = '';
           hideSuggestions();
           input.focus();
@@ -433,24 +431,14 @@ function closeTemplatesModal() {
   templatesModal.classList.add('hidden');
 }
 
-// --- Catálogo de productos habituales (nombre + sección + precio) ---
-function populateCatalogCategorySelect() {
-  catalogCategorySelect.textContent = '';
-  for (const cat of CATEGORIES) {
-    const opt = document.createElement('option');
-    opt.value = cat.id;
-    opt.textContent = `${cat.emoji} ${cat.label}`;
-    catalogCategorySelect.appendChild(opt);
-  }
-}
-
-function addCatalogEntry(name, category, price) {
+// --- Catálogo de productos habituales (nombre + precio) ---
+function addCatalogEntry(name, price) {
   const trimmed = name.trim();
   if (!trimmed) return;
   catalog.push({
     id: DB.uid(),
     name: trimmed,
-    category,
+    category: DEFAULT_CATEGORY,
     price: typeof price === 'number' && !Number.isNaN(price) ? price : null,
   });
   persistCatalog();
@@ -613,7 +601,7 @@ catalogModal.addEventListener('click', (e) => {
 });
 catalogForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  addCatalogEntry(catalogNameInput.value, catalogCategorySelect.value, parseFloat(catalogPriceInput.value));
+  addCatalogEntry(catalogNameInput.value, parseFloat(catalogPriceInput.value));
   catalogNameInput.value = '';
   catalogPriceInput.value = '';
   catalogNameInput.focus();
@@ -641,6 +629,5 @@ if ('serviceWorker' in navigator) {
 
 // --- Inicialización ---
 normalizeCategories();
-populateCatalogCategorySelect();
 buildCategorySections();
 render();

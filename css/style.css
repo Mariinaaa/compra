@@ -312,8 +312,7 @@ main {
   margin-bottom: 0.85rem;
 }
 
-.catalog-form input,
-.catalog-form select {
+.catalog-form input {
   font-size: 1rem;
   padding: 0.6rem 0.75rem;
   border-radius: var(--radius);
@@ -324,7 +323,6 @@ main {
 
 .catalog-form input[type=text] { flex: 2; min-width: 140px; }
 .catalog-form input[type=number] { flex: 1; min-width: 90px; }
-.catalog-form select { flex: 2; min-width: 140px; }
 
 .catalog-import-row {
   margin-bottom: 0.85rem;
